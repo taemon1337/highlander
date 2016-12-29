@@ -1,0 +1,13 @@
+version: "2"
+networks:
+  working:
+    external: true
+services:
+  highland-test:
+    build: ./highland-test
+    volumes:
+      - ./highland-test:/work
+    working_dir: /work
+    command: node run.js
+    networks:
+      - working
