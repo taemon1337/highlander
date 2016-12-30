@@ -1,4 +1,4 @@
-var EventSocket = require('./event-socket')
+var EventSocket = require('../web/common/js/es/event-socket-node')
   , PassThrough = require('stream').PassThrough
   , Archiver = require('archiver')
   ;
@@ -21,23 +21,24 @@ var EventSocket = require('./event-socket')
  *
  */
 function WebSocketHandler(socket) {
-  if(!(this instanceof WebSocketHandler)) {
+  var self = this;
+  if(!(self instanceof WebSocketHandler)) {
     return new WebSocketHandler(socket);
   }
-  this.socket = new EventSocket(socket);
-  this.archives = {};
-  this.passthru = {};
+  self.socket = new EventSocket(socket);
+  self.archives = {};
+  self.passthru = {};
 
-  this.socket.on('zip:init', function(data) {
+  self.socket.on('zip:init', function(data) {
     if(data.id) {
-      this.archives[data.id] = new Archiver('zip', { store: false, zlib: { level: 0 }});
+      self.archives[data.id] = new Archiver('zip', { store: false, zlib: { level: 0 }});
 
       if(data.download) {
-        this.socket.pipe(this.archives[data.id], data);
+        self.socket.pipe(self.archives[data.id], { id: data.id, event: "zip:download" });
       }
       if(data.next && data.next.url) {
         console.log("Forwarding Socket to ", data.next.url);
-        var that = this;
+        var that = self;
         var upload_socket = new EventSocket(data.next.url);
         upload_socket.on('open', function() {
           upload_socket.pipe(that.archives[data.id], data.next);
@@ -46,28 +47,36 @@ function WebSocketHandler(socket) {
     }
   });
 
-  this.socket.on('zip:append', function(data) {
+  self.socket.on('zip:append', function(data) {
     if(!data.id) {
       console.error("No id provided!");
     } else if(!data.name) {
       console.error("Appending to a zip requires a name");
-    } else if(!this.archives[data.id]) {
+    } else if(!self.archives[data.id]) {
       console.error("Archive not initialized!");
     } else {
       var through = new PassThrough();
       var pid = [data.id,data.name].join(':');
+      console.log("APPEND: ", data);
 
-      through.on('end', function() { delete this.passthru[pid] });
+      through.on('end', function() { delete self.passthru[pid] });
 
-      this.archives[data.id].append(this.passthru[pid], { name: data.name });
+      self.archives[data.id].append(through, { name: data.name });
+      self.passthru[pid] = through;
     }
   });
 
-  this.socket.on('zip:chunk', function(data) {
+  self.socket.on('zip:chunk', function(data) {
     if(data.id && data.name) {
       var pid = [data.id,data.name].join(':');
-      if(this.passthru[pid]) {
-        this.passthru[data.id].write(new Buffer.from(data.chunk, 'base64'));
+      if(self.passthru[pid]) {
+        console.log("CHUNK: ",data.chunk);
+        if(data.chunk) {
+          self.passthru[pid].write(new Buffer.from(data.chunk, 'base64'));
+        } else {
+          console.log("END OF STREAM ", pid);
+          self.passthru[pid].end();
+        }
       } else {
         console.error("Invalid Passthrough Id: ", pid);
       }
@@ -76,16 +85,16 @@ function WebSocketHandler(socket) {
     }
   });
 
-  this.socket.on('zip:finalize', function(data) {
+  self.socket.on('zip:finalize', function(data) {
     if(!data.id) {
       console.error("No id provided!");
-    } else if(!this.archives[data.id]) {
+    } else if(!self.archives[data.id]) {
       console.error("No archive for that id!", data.id);
     } else {
-      this.archives[data.id].finalize();
+      self.archives[data.id].finalize();
 
-      this.archives[data.id].on('close', function() {
-        delete this.archives[data.id];
+      self.archives[data.id].on('close', function() {
+        delete self.archives[data.id];
       });
     }
   });

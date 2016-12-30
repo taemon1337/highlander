@@ -2,7 +2,36 @@
 
 (function(exports) {
   var root = this;
-  var WebSocket = WebSocket || require('ws');
+  var WebSocket = require('ws');
+
+  var convertToBase64 = function(chunk) {
+    return new Buffer(chunk, 'binary').toString('base64');
+  };
+
+  var streamFile = function(self, stream, data, conn) {
+    var count = 0;
+    var stream_id = data.id || Math.random().toString().replace(".","");
+    var stream_evt = data.event || "stream";
+
+    stream.on('data', function(chunk) {
+      var encoded = convertToBase64(chunk);
+      var event_data = { id: stream_id, count: count, chunk: encoded };
+      for(var key in data) { event_data[key] = data[key]; }
+      var payload = JSON.stringify({ event: stream_evt, data: event_data });
+
+      conn.send(payload);
+      count += 1;
+    });
+
+    stream.on('end', function() {
+      var event_data = { id: stream_id, count: count };
+      for(var key in data) { event_data[key] = data[key]; }
+      var payload = JSON.stringify({ event: stream_evt, data: event_data });
+      conn.send(payload);
+    });
+
+    return this;
+  };
 
   var EventSocket = function(url_or_socket) {
     if(!(this instanceof EventSocket)) {
@@ -31,43 +60,12 @@
     };
 
     this.pipe = function(stream, data) {
-      var stream_id = Math.random().toString().replace(".","");
-      var count = 0;
-      var init_data = { id: stream_id, count: count };
-      for(var key in data) {
-        init_data[key] = data[key];
-      }
-
-      conn.send(JSON.stringify({ event: "stream:init", data: init_data }));
-
-      stream.on('data', function(chunk) {
-        var encoded = new Buffer(chunk, 'binary').toString('base64');
-        var evt_data = { id: stream_id, count: count, chunk: encoded };
-        for(var key in data) { evt_data[key] = data[key]; }
-
-        var payload = JSON.stringify({ event: "stream", data: evt_data });
-        conn.send(payload);
-        count += 1;
-      });
-
-      stream.on('end', function() {
-        var evt_data = { id: stream_id, count: count };
-        for(var key in data) { evt_data[key] = data[key]; }
-        var payload = JSON.stringify({ event: "stream:end", data: evt_data });
-        conn.send(payload);
-      });
-
-      return this;
+      return streamFile(this, stream, data, conn);
     };
 
     conn.onmessage = function(evt) {
       var json = JSON.parse(evt.data);
       dispatch(json.event, json.data);
-      if(json.data.subevent) {
-        // es.on('create:user', createPerson)
-        // es.on('stream:zip', handleZipStream)
-        dispatch([json.event,json.data.subevent].join(':'), json.data);
-      }
     };
 
     conn.onclose = function() { dispatch('close', null) }
@@ -88,4 +86,4 @@
     exports = module.exports = EventSocket;
   }
 
-})(typeof exports === 'undefined' ? this.EventSocket = {} : exports);
+})(exports);
