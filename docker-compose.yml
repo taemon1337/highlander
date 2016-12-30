@@ -11,3 +11,5 @@ services:
     command: node run.js
     networks:
       - working
+    ports:
+      - 8080:8080

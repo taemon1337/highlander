@@ -4,13 +4,19 @@ var server = require('http').createServer()
   , express = require('express')
   , _ = require('highland')
   , app = express()
+  , WebSocketHandler = require('./lib/websocket_handler')
+  , WebFormHandler = require('./lib/webform_handler')
   , port = process.env.PORT || 8080
   ;
 
 app.use(express.static('web'));
 
+app.post('/', function(req, res) {
+  return WebFormHandler(req, res);
+});
+
 wss.on('connection', function(socket) {
-  console.log("WS CONNECTED");
+  WebSocketHandler(socket);
 });
 
 server.on('request', app);

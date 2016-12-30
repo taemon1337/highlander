@@ -1,20 +1,19 @@
 <home>
-  <input onchange={ showFiles } class='hidden' type='file', id='files' multiple />
-  <h3>I want to...</h3>
-  <button onclick={ openDialog } class="btn btn-block btn-lg btn-primary">
-    Select Files
-  </button>
+  <div class="row">
+    <div class="col-xs-12">
+      <h3>I want to...</h3>
+      <select-files></select-files>
 
-  <div class="list-group">
-    <a each={ files } href="{ name }">
-      { name } <span style="font-size:80%;">({ size })</span>
-    </a>
+      <button onclick={ sendFiles } type="button" class="btn btn-lg btn-{ files.length ? 'success' : 'default disabled' }">Send Files</button>
+    </div>
   </div>
-
   <script>
-    this.openDialog = function() { $('#files').click() }
     this.files = opts.files || []
 
-    
+    this.sendFiles = function() {
+      if(this.files.length) {
+        console.log('sending...')
+      }
+    }
   </script>
 </home>
