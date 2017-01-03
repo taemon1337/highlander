@@ -14,7 +14,7 @@
     </div>
     <div if={ !hide } class="panel-body">
       <div if={ files.length } class="list-group">
-        <div each={ files } class="list-group-item">
+        <div each={ files } class="file-item list-group-item">
           <span title='Add a note' onclick={ editNote } class="pointer fa fa-pencil-square-o pull-left"></span>
           <b>{ name }</b>
           <span class='pull-right' style="font-size:80%;">({ humanFileSize(size) })</span>
@@ -56,5 +56,15 @@
         e.item.note = body.value;
       });
     }
+
+    this.on('update', function() {
+      for(var i=0; i<this.files.length; i++) {
+        var file = this.files[i];
+//        $(file).off('progress')
+        $(file).on('progress', function(p) {
+          $(".file-item:eq("+i+")").css("background","-webkit-linear-gradient(left, green "+p.percent+"%, white "+(100-p.percent)+"%)")
+        })
+      }
+    })
   </script>
 </select-files>

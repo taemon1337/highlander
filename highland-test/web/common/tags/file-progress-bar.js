@@ -10,8 +10,6 @@ riot.tag('file-progress-bar', "<div class='progress'></div>", function(opts) {
   })
 
   $(this.file).on('progress', function(evt, p) {
-    console.log('PROGRESS: ', p);
-    window.bar = self.bar;
     $(self.bar)
       .width(p.percent+"%")
 //      .html(p.percent+"% - <span style='font-size:70%;'>"+self.title+"</small>")

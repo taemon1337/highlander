@@ -17,7 +17,7 @@
   var streamFile = function(self, file, data, conn) {
     var fileSize = file.size;
     var filename = file.name;
-    var chunkSize = data.chunkSize || 1024*1024; // 1MB
+    var chunkSize = data.chunkSize || 1024*1024; // 1024*1024=1MB
     var offset = data.offset || 0;
     var count = 0;
     var stream_id = data.id || Math.random().toString().replace(".","");
@@ -36,7 +36,8 @@
         count += 1;
       } else {
         console.error("Error reading file ", evt.target.error);
-        $(file).trigger('progress', { percent: Math.floor(offset/fileSize*100), status: "danger" });
+        var pct = Math.floor(offset/fileSize*100);
+        $(file).trigger('progress', { percent: pct, status: "danger" });
         return;
       }
 
